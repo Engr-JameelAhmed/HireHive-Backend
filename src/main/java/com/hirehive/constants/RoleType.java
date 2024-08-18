@@ -1,8 +1,8 @@
 package com.hirehive.constants;
 
 public enum RoleType {
-    EMPLOYEE,
-    EMPLOYER,
-    INVESTOR,
-    BUSINESSOWNER
+    ROLE_EMPLOYEE,
+    ROLE_EMPLOYER,
+    ROLE_INVESTOR,
+    ROLE_BUSINESSOWNER
 }

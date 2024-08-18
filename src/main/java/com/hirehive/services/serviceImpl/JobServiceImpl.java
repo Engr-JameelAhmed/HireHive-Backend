@@ -54,6 +54,8 @@ public class JobServiceImpl implements GenericService<JobDto, Long> {
                 .salary(jobDto.getSalary())
                 .location(jobDto.getLocation())
                 .type(jobDto.getType())
+                .category(jobDto.getCategory())
+                .workType(jobDto.getWorkType())
                 .build();
 
         User user = userRepository.findById(jobDto.getEmployerId()).orElseThrow(() -> new ResourceNotFoundException("Employer Not Found with this ID : "+ jobDto.getEmployerId()));
@@ -81,8 +83,8 @@ public class JobServiceImpl implements GenericService<JobDto, Long> {
             job.setSalary(jobDto.getSalary());
             job.setLocation(jobDto.getLocation());
             job.setType(jobDto.getType());
-
-
+            job.setCategory(jobDto.getCategory());
+            job.setWorkType(jobDto.getWorkType());
             User user = userRepository.findById(jobDto.getEmployerId()).orElseThrow(() -> new ResourceNotFoundException("There is not Employer with this Id : "+jobDto.getEmployerId()));
             job.setEmployer_id(user);
 

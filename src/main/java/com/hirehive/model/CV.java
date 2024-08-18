@@ -23,6 +23,7 @@ public class CV {
     @JoinColumn(name = "employeeId", referencedColumnName = "id")
     private User employeeId;
 
+    private String pdfFilePath; // New field to store the file path
 
 }
 

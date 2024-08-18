@@ -10,7 +10,10 @@ import com.hirehive.services.GenericService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,7 +41,12 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
     }
 
     @Override
-    public CVDto create(CVDto cvDto) {
+    public CVDto create(CVDto entity) {
+        return null;
+    }
+
+
+    public CVDto createCV(CVDto cvDto, MultipartFile pdfFile) {
         CV cv = CV.builder()
                 .title(cvDto.getTitle())
                 .content(cvDto.getContent())
@@ -46,6 +54,26 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
 
         User userId = userRepository.findById(cvDto.getEmployeeId()).orElseThrow(() -> new ResourceNotFoundException("User Not Found with this ID : "+ cvDto.getEmployeeId()));
         cv.setEmployeeId(userId);
+
+        if (pdfFile != null && !pdfFile.isEmpty()) {
+            try {
+                // Define your upload directory
+                String uploadDir = "/path/to/upload/directory/";
+                // Generate a unique file name
+                String fileName = System.currentTimeMillis() + "_" + pdfFile.getOriginalFilename();
+                // Save the file
+                File file = new File(uploadDir + fileName);
+                pdfFile.transferTo(file);
+                // Set the file path in the entity
+                cv.setPdfFilePath(file.getAbsolutePath());
+                // Also set the file name in the DTO if needed
+                cvDto.setPdfFileName(fileName);
+            } catch (IOException e) {
+                // Handle the exception
+                throw new RuntimeException("Failed to store file", e);
+            }
+        }
+
 
         CV save = cvRepository.save(cv);
         return modelMapper.map(save,CVDto.class);

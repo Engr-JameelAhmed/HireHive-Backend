@@ -8,6 +8,7 @@ import com.hirehive.repository.*;
 import com.hirehive.services.GenericService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,8 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     @Override
     public List<UserDto> getAll() {
         List<User> all = userRepository.findAll();
@@ -56,11 +59,11 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
         if (!isEmailValid(userDto.getEmail())) {
             throw new RuntimeException("Invalid or non-existent email address");
         }
-        User userbyEmail = userRepository.findByEmail(userDto.getEmail());
-        if (userbyEmail == null) {
-            User user = User.builder()
+        Optional<User> user = userRepository.findByEmail(userDto.getEmail());
+        if (!user.isPresent()) {
+            User newUser = User.builder()
                     .username(userDto.getUsername())
-                    .password(userDto.getPassword())
+                    .password(passwordEncoder.encode(userDto.getPassword()))
                     .email(userDto.getEmail())
                     .role(userDto.getRole())
                     .description(userDto.getDescription())
@@ -70,34 +73,34 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
             // Fetch and set related entities if provided
             if (userDto.getCvIds() != null && !userDto.getCvIds().isEmpty()) {
                 List<CV> cvs = cvRespository.findAllById(userDto.getCvIds());
-                user.setCvs(cvs);
+                newUser.setCvs(cvs);
             } else {
-                user.setCvs(Collections.emptyList());
+                newUser.setCvs(Collections.emptyList());
             }
 
             if (userDto.getJobIds() != null && !userDto.getJobIds().isEmpty()) {
                 List<Job> jobs = jobRepository.findAllById(userDto.getJobIds());
-                user.setJobs(jobs);
+                newUser.setJobs(jobs);
             } else {
-                user.setJobs(Collections.emptyList());
+                newUser.setJobs(Collections.emptyList());
             }
 
             if (userDto.getBusinessIds() != null && !userDto.getBusinessIds().isEmpty()) {
                 List<Business> businesses = businessRepository.findAllById(userDto.getBusinessIds());
-                user.setBusinesses(businesses);
+                newUser.setBusinesses(businesses);
             } else {
-                user.setBusinesses(Collections.emptyList());
+                newUser.setBusinesses(Collections.emptyList());
             }
 
             if (userDto.getInvestmentIds() != null && !userDto.getInvestmentIds().isEmpty()) {
                 List<Investment> investments = investmentRepository.findAllById(userDto.getInvestmentIds());
-                user.setInvestments(investments);
+                newUser.setInvestments(investments);
             } else {
-                user.setInvestments(Collections.emptyList());
+                newUser.setInvestments(Collections.emptyList());
             }
 
             // Save the new user
-            User savedUser = userRepository.save(user);
+            User savedUser = userRepository.save(newUser);
             new Thread(() -> {
                 emailSendingService.sendEmail(userDto.getEmail());
             }).start();

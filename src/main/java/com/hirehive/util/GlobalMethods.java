@@ -1,9 +1,13 @@
 package com.hirehive.util;
 import org.apache.commons.validator.routines.EmailValidator;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.http.client.fluent.Content;
 import org.apache.http.client.fluent.Request;
 import org.json.JSONObject;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import static com.hirehive.constants.ProjectConstants.API_KEY;
 
@@ -29,5 +33,10 @@ public class GlobalMethods {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public static List<SimpleGrantedAuthority> convertToAuthorityCollection(String role) {
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+        return Collections.singletonList(authority);
     }
 }

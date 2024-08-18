@@ -1,6 +1,8 @@
 package com.hirehive.model;
 
+import com.hirehive.constants.JobCategory;
 import com.hirehive.constants.JobType;
+import com.hirehive.constants.WorkType;
 import jakarta.persistence.*;
 
 import jakarta.persistence.*;
@@ -27,7 +29,13 @@ public class Job {
     private String location;
 
     @Enumerated(EnumType.STRING)
+    private JobCategory category;
+
+    @Enumerated(EnumType.STRING)
     private JobType type;
+
+    @Enumerated(EnumType.STRING)
+    private WorkType workType;
 
     @ManyToOne
     @JoinColumn(name = "employer_id",referencedColumnName = "id")

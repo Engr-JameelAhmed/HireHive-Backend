@@ -9,4 +9,5 @@ public class CVDto {
     private String title;
     private String content;
     private Long employeeId;
+    private String pdfFileName; // New field to store the PDF file name
 }

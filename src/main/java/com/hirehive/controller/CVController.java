@@ -4,7 +4,10 @@ import com.hirehive.dto.CVDto;
 import com.hirehive.model.CV;
 import com.hirehive.services.serviceImpl.CVServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,9 +28,10 @@ public class CVController {
     }
 
     @PostMapping("/create")
-    public CVDto createCV(@RequestBody CVDto cv) {
+    public ResponseEntity<CVDto> createCV(@ModelAttribute CVDto cv, @RequestParam("pdfFile") MultipartFile pdfFile) {
         System.out.println("This is Create");
-        return cvService.create(cv);
+        CVDto createdCV = cvService.createCV(cv, pdfFile);
+        return new ResponseEntity<>(createdCV, HttpStatus.CREATED);
     }
     @PutMapping("/{id}")
     public CVDto updateCV(@PathVariable Long id, @RequestBody CVDto cvDetails) {
