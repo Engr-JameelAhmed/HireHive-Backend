@@ -1,5 +1,6 @@
 package com.hirehive.services.serviceImpl;
 
+import com.hirehive.constants.BusinessStatus;
 import com.hirehive.dto.InvestmentDto;
 import com.hirehive.dto.JobDto;
 import com.hirehive.exception.ResourceNotFoundException;
@@ -13,6 +14,9 @@ import com.hirehive.repository.UserRepository;
 import com.hirehive.services.GenericService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -43,20 +47,26 @@ public class InvestmentServiceImpl implements GenericService<InvestmentDto, Long
     }
     @Override
     public InvestmentDto create(InvestmentDto investmentDto) {
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + currentUserEmail));
+
         Investment investment = Investment.builder()
-                .amount(investmentDto.getAmount())
-                .proposal(investmentDto.getProposal())
-                .status(investmentDto.getStatus())
+                .investor_id(user)
                 .build();
-
-
-        User user = userRepository.findById(investmentDto.getInvestorId()).orElseThrow(() -> new ResourceNotFoundException("There is no Investor with this ID : " + investmentDto.getInvestorId()));
-        investment.setInvestor_id(user);
 
         Business business = businessRepository.findById(investmentDto.getBusinessId()).orElseThrow(() -> new ResourceNotFoundException("There is No business with this ID where you are doing an investing : " + investmentDto.getBusinessId()));
         investment.setBusiness(business);
 
         Investment save = investmentRepository.save(investment);
+
+
+        // Check the business status and update it if needed
+        if (business.getStatus() == BusinessStatus.PENDING) {
+            business.setStatus(BusinessStatus.ACTIVE);
+            businessRepository.save(business);
+        }
         return modelMapper.map(save, InvestmentDto.class);
     }
     @Override
@@ -66,10 +76,6 @@ public class InvestmentServiceImpl implements GenericService<InvestmentDto, Long
 
         if (optionalInves.isPresent()){
             Investment investment = optionalInves.get();
-
-            investment.setAmount(investmentDto.getAmount());
-            investment.setProposal(investmentDto.getProposal());
-            investment.setStatus(investmentDto.getStatus());
 
             User user = userRepository.findById(investmentDto.getInvestorId()).orElseThrow(() -> new ResourceNotFoundException("There is no Investor with this ID : " + investmentDto.getInvestorId()));
             investment.setInvestor_id(user);

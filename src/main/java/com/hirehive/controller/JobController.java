@@ -1,9 +1,14 @@
 package com.hirehive.controller;
 
+import com.hirehive.dto.JobApplicationDTO;
 import com.hirehive.dto.JobDto;
-import com.hirehive.model.Job;
 import com.hirehive.services.serviceImpl.JobServiceImpl;
+import com.hirehive.springSecurity.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,4 +39,40 @@ public class JobController {
     public void deleteJob(@PathVariable Long id) {
         jobService.delete(id);
     }
+
+    @GetMapping("/employerApplication")
+    public ResponseEntity<?> getApplicationOfLoggedEmployer() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            Long currentUserId = userDetails.getUserId();
+            List<JobApplicationDTO> jobApplications = jobService.getJobDetailsByEmployer(currentUserId);
+            if (jobApplications.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(jobApplications);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("User not found or not authenticated");
+    }
+    @GetMapping("/employerPostedJobs")
+    public ResponseEntity<?> getAllJobsOfLoggedEmployer() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            Long currentUserId = userDetails.getUserId();
+            List<JobDto> allJobsOfLoggedEmployer = jobService.getAllJobsOfLoggedEmployer(currentUserId);
+            if (allJobsOfLoggedEmployer.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(allJobsOfLoggedEmployer);
+        }
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("User details not found");
+    }
+
+
 }

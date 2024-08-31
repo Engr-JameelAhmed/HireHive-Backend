@@ -23,14 +23,10 @@ public class Investment {
     private User investor_id;
 
     @ManyToOne
-    @JoinColumn(name = "business_id")
+    @JoinColumn(name = "business_id" , referencedColumnName = "id")
     private Business business;
 
-    private Double amount;
-    private String proposal;
 
-    @Enumerated(EnumType.STRING)
-    private InvestmentStatus status;
 
 }
 

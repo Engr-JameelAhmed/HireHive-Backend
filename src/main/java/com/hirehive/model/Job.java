@@ -2,12 +2,14 @@ package com.hirehive.model;
 
 import com.hirehive.constants.JobCategory;
 import com.hirehive.constants.JobType;
+import com.hirehive.constants.Locations;
 import com.hirehive.constants.WorkType;
 import jakarta.persistence.*;
 
-import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -26,8 +28,11 @@ public class Job {
     private String description;
     private String companyName;
     private Double salary;
-    private String location;
 
+    private LocalDateTime postedDate;
+
+    @Enumerated(EnumType.STRING)
+    private Locations location;
     @Enumerated(EnumType.STRING)
     private JobCategory category;
 

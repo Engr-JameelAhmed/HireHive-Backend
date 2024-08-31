@@ -1,6 +1,8 @@
 package com.hirehive.util;
 import org.apache.commons.validator.routines.EmailValidator;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 
@@ -38,5 +40,10 @@ public class GlobalMethods {
     public static List<SimpleGrantedAuthority> convertToAuthorityCollection(String role) {
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
         return Collections.singletonList(authority);
+    }
+
+    public static String formatPostedDate(LocalDateTime postedDate) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        return postedDate.format(formatter);
     }
 }

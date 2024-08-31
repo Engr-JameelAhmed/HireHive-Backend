@@ -1,5 +1,6 @@
 package com.hirehive.services.serviceImpl;
 
+import com.hirehive.constants.BusinessStatus;
 import com.hirehive.dto.BusinessDto;
 import com.hirehive.dto.CVDto;
 import com.hirehive.exception.ResourceNotFoundException;
@@ -13,8 +14,12 @@ import com.hirehive.repository.UserRepository;
 import com.hirehive.services.GenericService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -43,49 +48,110 @@ public class BusinessServiceImpl implements GenericService<BusinessDto, Long> {
         return  modelMapper.map(business, BusinessDto.class);
     }
     @Override
-    public BusinessDto create(BusinessDto business) {
-        Business business1 = Business.builder()
-                .name(business.getName())
-                .industry(business.getIndustry())
+    public BusinessDto create(BusinessDto businessDto) {
+        // Get the currently logged-in user's ID
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String loggedInUsername;
+
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            loggedInUsername = userDetails.getUsername(); // or getUserId() if you have a method to get the ID
+        } else {
+            throw new RuntimeException("No user is currently logged in");
+        }
+
+        // Retrieve the User entity based on the logged-in username
+        User loggedUser = userRepository.findByEmail(loggedInUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("There is no Owner with this username: " + loggedInUsername));
+
+        // Create the Business entity
+        Business business = Business.builder()
+                .owner_id(loggedUser)
+                .ownerName(loggedUser.getUsername())
+                .description(businessDto.getDescription())
+                .createdOn(LocalDateTime.now())
+                .investmentAmount(businessDto.getInvestmentAmount())
+                .name(businessDto.getName())
+                .industry(businessDto.getIndustry())
+                .sharePercent(businessDto.getSharePercent())
                 .build();
 
-        User user = userRepository.findById(business.getOwnerId()).orElseThrow(() -> new ResourceNotFoundException("There is no Owner with this ID : " + business.getOwnerId()));
-        business1.setOwner_id(user);
-
-        if (business.getInvestmentIds() != null && business.getInvestmentIds().isEmpty()){
-            List<Investment> allById = investmentRepository.findAllById(business.getInvestmentIds());
-            business1.setInvestments(allById);
-        }else{
-            business1.setInvestments(Collections.emptyList());
+        // Retrieve and set investments
+        if (businessDto.getInvestmentIds() != null && !businessDto.getInvestmentIds().isEmpty()) {
+            List<Investment> investments = investmentRepository.findAllById(businessDto.getInvestmentIds());
+            business.setInvestments(investments);
+        } else {
+            business.setInvestments(Collections.emptyList());
         }
-        Business save = businessRepository.save(business1);
-        return modelMapper.map(save, BusinessDto.class);
-    }
 
+        // Determine the status based on the size of the investments list
+        if (business.getInvestments().size() <= 4) {
+            business.setStatus(BusinessStatus.PENDING);
+        } else {
+            business.setStatus(BusinessStatus.ACTIVE);
+        }
+
+        // Save the Business entity
+        Business savedBusiness = businessRepository.save(business);
+
+        // Return the BusinessDto
+        return modelMapper.map(savedBusiness, BusinessDto.class);
+    }
     @Override
     public BusinessDto update(Long id, BusinessDto businessDto) {
-        Optional<Business> optionalBusiness = businessRepository.findById(id);
-        if (optionalBusiness.isPresent()){
-            Business business = optionalBusiness.get();
+        // Get the currently logged-in user's ID
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String loggedInUsername;
 
-            business.setName(businessDto.getName());
-            business.setIndustry(businessDto.getIndustry());
-
-            User user = userRepository.findById(businessDto.getOwnerId()).orElseThrow(() -> new ResourceNotFoundException("There is no Owner with this ID : " + businessDto.getOwnerId()));
-            business.setOwner_id(user);
-
-            if (businessDto.getInvestmentIds() != null && businessDto.getInvestmentIds().isEmpty()){
-                List<Investment> allById = investmentRepository.findAllById(businessDto.getInvestmentIds());
-                business.setInvestments(allById);
-            }else{
-                business.setInvestments(Collections.emptyList());
-            }
-            Business save = businessRepository.save(business);
-            return modelMapper.map(save, BusinessDto.class);
-
-        }else{
-            throw new RuntimeException("There is no Investment available with this ID : "+ id);
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            loggedInUsername = userDetails.getUsername(); // or getUserId() if you have a method to get the ID
+        } else {
+            throw new RuntimeException("No user is currently logged in");
         }
+
+        // Retrieve the User entity based on the logged-in username
+        User loggedUser = userRepository.findByEmail(loggedInUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("There is no Owner with this username: " + loggedInUsername));
+
+        // Find the existing Business entity
+        Business business = businessRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("There is no Business available with this ID: " + id));
+
+        // Update the Business entity fields (excluding createdOn)
+        business.setOwner_id(loggedUser);
+        business.setOwnerName(businessDto.getOwnerName());
+        business.setDescription(businessDto.getDescription());
+        // Do not modify createdOn, keep its existing value
+        business.setInvestmentAmount(businessDto.getInvestmentAmount());
+        business.setName(businessDto.getName());
+        business.setIndustry(businessDto.getIndustry());
+        business.setSharePercent(businessDto.getSharePercent());
+
+        // Update the owner based on the provided ID
+        User user = userRepository.findById(businessDto.getOwnerId())
+                .orElseThrow(() -> new ResourceNotFoundException("There is no Owner with this ID: " + businessDto.getOwnerId()));
+        business.setOwner_id(user);
+
+        // Update the investments list
+        if (businessDto.getInvestmentIds() != null && !businessDto.getInvestmentIds().isEmpty()) {
+            List<Investment> investments = investmentRepository.findAllById(businessDto.getInvestmentIds());
+            business.setInvestments(investments);
+        } else {
+            business.setInvestments(Collections.emptyList());
+        }
+        // Determine the status based on the size of the investments list
+        if (business.getInvestments().size() <= 4) {
+            business.setStatus(BusinessStatus.PENDING);
+        } else {
+            business.setStatus(BusinessStatus.ACTIVE);
+        }
+
+        // Save the updated Business entity
+        Business updatedBusiness = businessRepository.save(business);
+
+        // Return the updated BusinessDto
+        return modelMapper.map(updatedBusiness, BusinessDto.class);
     }
     @Override
     public void delete(Long id) {
@@ -93,5 +159,14 @@ public class BusinessServiceImpl implements GenericService<BusinessDto, Long> {
             throw new RuntimeException("There is no Business with this ID  to be deleted : "+ id);
         }
         businessRepository.deleteById(id);
+    }
+
+    public List<BusinessDto> getAllActiveBusiness() {
+        List<Business> all = businessRepository.getAllActiveBusiness();
+        return all.stream().map(business -> modelMapper.map(business, BusinessDto.class)).collect(Collectors.toList());
+    }
+    public List<BusinessDto> getAllPendingBusiness() {
+        List<Business> all = businessRepository.getAllPendingBusiness();
+        return all.stream().map(business -> modelMapper.map(business, BusinessDto.class)).collect(Collectors.toList());
     }
 }
