@@ -1,8 +1,11 @@
 package com.hirehive.controller;
 
 import com.hirehive.dto.InvestmentDto;
+import com.hirehive.dto.UserBusinessInvestmentDTO;
 import com.hirehive.services.serviceImpl.InvestmentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,5 +35,12 @@ public class InvestmentController {
     @DeleteMapping("/{id}")
     public void deleteInvestment(@PathVariable Long id) {
         investmentService.delete(id);
+    }
+
+    @GetMapping("/currentUserAllInvestments")
+    public ResponseEntity<?> getAllInvestmentsForLoggedUser() {
+        List<UserBusinessInvestmentDTO> allInvestmentsForLoggedUser = investmentService.getAllInvestmentsForLoggedUser();
+        return new ResponseEntity<>(allInvestmentsForLoggedUser, HttpStatus.OK);
+
     }
 }

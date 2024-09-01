@@ -2,11 +2,10 @@ package com.hirehive.services.serviceImpl;
 
 import com.hirehive.constants.BusinessStatus;
 import com.hirehive.dto.InvestmentDto;
-import com.hirehive.dto.JobDto;
+import com.hirehive.dto.UserBusinessInvestmentDTO;
 import com.hirehive.exception.ResourceNotFoundException;
 import com.hirehive.model.Business;
 import com.hirehive.model.Investment;
-import com.hirehive.model.Job;
 import com.hirehive.model.User;
 import com.hirehive.repository.BusinessRepository;
 import com.hirehive.repository.InvestmentRepository;
@@ -14,9 +13,7 @@ import com.hirehive.repository.UserRepository;
 import com.hirehive.services.GenericService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -97,5 +94,15 @@ public class InvestmentServiceImpl implements GenericService<InvestmentDto, Long
             throw new RuntimeException("There is no Investment with this ID to be deleted : "+ id);
         }
         investmentRepository.deleteById(id);
+    }
+
+    public List<UserBusinessInvestmentDTO> getAllInvestmentsForLoggedUser(){
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + currentUserEmail));
+
+        List<UserBusinessInvestmentDTO> allInvestmentsForLoggedUser = investmentRepository.getAllInvestmentsForLoggedUser(user.getId());
+
+        return allInvestmentsForLoggedUser;
     }
 }

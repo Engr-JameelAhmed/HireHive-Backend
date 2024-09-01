@@ -11,7 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +27,9 @@ import static com.hirehive.util.GlobalMethods.isValidEmail;
 
 @Service
 public class UserServiceImpl implements GenericService<UserDto, Long> {
+
+    public final String UPLOAD_DIR="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Resumes\\";
+
 
     @Autowired
     private EmailSendingService emailSendingService;
@@ -54,7 +62,7 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
     }
     @Transactional
     @Override
-    public UserDto create(UserDto userDto) {
+    public UserDto create(UserDto userDto) throws IOException {
         // Validate if the email actually exists using AbstractAPI
         if (!isEmailValid(userDto.getEmail())) {
             throw new RuntimeException("Invalid or non-existent email address");
@@ -66,7 +74,6 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
                     .password(passwordEncoder.encode(userDto.getPassword()))
                     .email(userDto.getEmail())
                     .role(userDto.getRole())
-                    .description(userDto.getDescription())
                     .gender(userDto.getGender())
                     .build();
 
@@ -111,7 +118,81 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
             throw new RuntimeException("User Already Exists");
         }
     }
+    @Transactional
+    public UserDto createUser(MultipartFile file, UserDto userDto) throws IOException {
+        String filePath = null;
 
+        // Check if the file is not empty
+        if (file != null && !file.isEmpty()) {
+            // Save the file to the file system
+            String fileName = file.getOriginalFilename();
+            filePath = Paths.get(UPLOAD_DIR + fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR));
+            Files.write(Paths.get(filePath), file.getBytes());
+        }
+
+        // Validate if the email actually exists using AbstractAPI
+        if (!isEmailValid(userDto.getEmail())) {
+            throw new RuntimeException("Invalid or non-existent email address");
+        }
+
+        Optional<User> user = userRepository.findByEmail(userDto.getEmail());
+        if (!user.isPresent()) {
+            User.UserBuilder userBuilder = User.builder()
+                    .username(userDto.getUsername())
+                    .password(passwordEncoder.encode(userDto.getPassword()))
+                    .email(userDto.getEmail())
+                    .role(userDto.getRole())
+                    .gender(userDto.getGender());
+
+            // Set the cv field only if a file is uploaded
+            if (filePath != null) {
+                userBuilder.cv(filePath);
+            }
+
+            User newUser = userBuilder.build();
+
+            // Fetch and set related entities if provided
+            if (userDto.getCvIds() != null && !userDto.getCvIds().isEmpty()) {
+                List<CV> cvs = cvRespository.findAllById(userDto.getCvIds());
+                newUser.setCvs(cvs);
+            } else {
+                newUser.setCvs(Collections.emptyList());
+            }
+
+            if (userDto.getJobIds() != null && !userDto.getJobIds().isEmpty()) {
+                List<Job> jobs = jobRepository.findAllById(userDto.getJobIds());
+                newUser.setJobs(jobs);
+            } else {
+                newUser.setJobs(Collections.emptyList());
+            }
+
+            if (userDto.getBusinessIds() != null && !userDto.getBusinessIds().isEmpty()) {
+                List<Business> businesses = businessRepository.findAllById(userDto.getBusinessIds());
+                newUser.setBusinesses(businesses);
+            } else {
+                newUser.setBusinesses(Collections.emptyList());
+            }
+
+            if (userDto.getInvestmentIds() != null && !userDto.getInvestmentIds().isEmpty()) {
+                List<Investment> investments = investmentRepository.findAllById(userDto.getInvestmentIds());
+                newUser.setInvestments(investments);
+            } else {
+                newUser.setInvestments(Collections.emptyList());
+            }
+
+            // Save the new user
+            User savedUser = userRepository.save(newUser);
+            new Thread(() -> {
+                emailSendingService.sendEmail(userDto.getEmail());
+            }).start();
+
+            // Return the saved user mapped to UserDto
+            return modelMapper.map(savedUser, UserDto.class);
+        } else {
+            throw new RuntimeException("User Already Exists");
+        }
+    }
 
     @Override
     public UserDto update(Long id, UserDto userDto) {
@@ -125,7 +206,6 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
             user.setPassword(userDto.getPassword());
             user.setEmail(userDto.getEmail());
             user.setRole(userDto.getRole());
-            user.setDescription(userDto.getDescription());
             user.setGender(userDto.getGender());
 
 

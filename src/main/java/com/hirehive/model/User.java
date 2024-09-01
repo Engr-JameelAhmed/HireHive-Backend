@@ -24,7 +24,8 @@ public class User {
     private String username;
     private String password;
     private String email;
-    private String description;
+
+    private String cv;
 
     @Enumerated(EnumType.STRING)
     private RoleType role;
@@ -44,4 +45,6 @@ public class User {
     private List<Investment> investments;
 
 }
+
+
 

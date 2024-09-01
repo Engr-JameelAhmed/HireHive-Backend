@@ -14,6 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,6 +30,7 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
     @Autowired
     private UserRepository userRepository;
 
+    public final String UPLOAD_DIR="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Resumes\\";
     @Override
     public List<CVDto> getAll() {
         List<CV> all = cvRepository.findAll();
@@ -41,42 +45,27 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
     }
 
     @Override
-    public CVDto create(CVDto entity) {
+    public CVDto create(CVDto entity) throws IOException {
         return null;
     }
 
+    public CVDto createCV(MultipartFile file,CVDto cvDto) throws IOException {
 
-    public CVDto createCV(CVDto cvDto, MultipartFile pdfFile) {
-        CV cv = CV.builder()
-                .title(cvDto.getTitle())
-                .content(cvDto.getContent())
-                .build();
+        // Save the file to the file system
+        String fileName = file.getOriginalFilename();
+        Path filePath = Paths.get(UPLOAD_DIR + fileName);
+        Files.createDirectories(filePath.getParent());
+        Files.write(filePath, file.getBytes());
 
-        User userId = userRepository.findById(cvDto.getEmployeeId()).orElseThrow(() -> new ResourceNotFoundException("User Not Found with this ID : "+ cvDto.getEmployeeId()));
-        cv.setEmployeeId(userId);
+        // Map DTO to entity
+        CV cv = new CV();
+        cv.setEmployeeId(userRepository.findById(cvDto.getEmployeeId()).orElse(null));
+        cv.setPdfFilePath(filePath.toString());
 
-        if (pdfFile != null && !pdfFile.isEmpty()) {
-            try {
-                // Define your upload directory
-                String uploadDir = "/path/to/upload/directory/";
-                // Generate a unique file name
-                String fileName = System.currentTimeMillis() + "_" + pdfFile.getOriginalFilename();
-                // Save the file
-                File file = new File(uploadDir + fileName);
-                pdfFile.transferTo(file);
-                // Set the file path in the entity
-                cv.setPdfFilePath(file.getAbsolutePath());
-                // Also set the file name in the DTO if needed
-                cvDto.setPdfFileName(fileName);
-            } catch (IOException e) {
-                // Handle the exception
-                throw new RuntimeException("Failed to store file", e);
-            }
-        }
+        // Save the CV entity to the database
+        cv = cvRepository.save(cv);
 
-
-        CV save = cvRepository.save(cv);
-        return modelMapper.map(save,CVDto.class);
+        return modelMapper.map(cv,CVDto.class);
     }
 
     @Override
@@ -84,9 +73,6 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
         Optional<CV> optionalCV = cvRepository.findById(id);
         if (optionalCV.isPresent()){
             CV cv = optionalCV.get();
-
-            cv.setTitle(cvDto.getTitle());
-            cv.setContent(cv.getContent());
 
             User user = userRepository.findById(cvDto.getEmployeeId()).orElseThrow(() -> new ResourceNotFoundException("There is not User with this Id : "+cvDto.getEmployeeId()));
             cv.setEmployeeId(user);
@@ -104,5 +90,17 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
             throw new RuntimeException("There is not CV with this ID : "+ id);
         }
         cvRepository.deleteById(id);
+    }
+
+
+    public File getCVFile(Long cvId) throws IOException {
+        CV cv = cvRepository.findById(cvId).orElseThrow(() -> new IllegalArgumentException("Invalid CV ID"));
+        Path filePath = Paths.get(cv.getPdfFilePath());
+
+        if (Files.exists(filePath)) {
+            return filePath.toFile();
+        } else {
+            throw new IOException("File not found");
+        }
     }
 }

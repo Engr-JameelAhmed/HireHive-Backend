@@ -19,7 +19,7 @@ public class UserDto {
     private String password;
     private String email;
     private RoleType role;
-    private String description;
+    private String cv;
     private Gender gender;
     private List<Long> cvIds;
     private List<Long> jobIds;
