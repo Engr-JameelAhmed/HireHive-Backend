@@ -3,6 +3,7 @@ package com.hirehive.dto;
 import java.time.LocalDateTime;
 
 public interface JobApplicationDTO {
+    Long getApplicationId();
     Long getEmployeeId();
     String getTitle();
     String getType();
@@ -10,5 +11,6 @@ public interface JobApplicationDTO {
     String getCategory();
     String getUsername();
     String getEmail();
+    String getCV();
     LocalDateTime getPostedDate();
 }

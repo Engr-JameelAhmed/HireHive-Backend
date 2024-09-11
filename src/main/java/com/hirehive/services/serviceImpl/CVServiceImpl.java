@@ -93,9 +93,9 @@ public class CVServiceImpl implements GenericService<CVDto, Long> {
     }
 
 
-    public File getCVFile(Long cvId) throws IOException {
-        CV cv = cvRepository.findById(cvId).orElseThrow(() -> new IllegalArgumentException("Invalid CV ID"));
-        Path filePath = Paths.get(cv.getPdfFilePath());
+    public File getCVFile(Long userId) throws IOException {
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User is not present"));
+        Path filePath = Paths.get(user.getCv());
 
         if (Files.exists(filePath)) {
             return filePath.toFile();

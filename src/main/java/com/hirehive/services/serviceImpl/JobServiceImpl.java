@@ -2,6 +2,7 @@ package com.hirehive.services.serviceImpl;
 
 import com.hirehive.dto.JobApplicationDTO;
 import com.hirehive.dto.JobDto;
+import com.hirehive.dto.SearchJobsDTO;
 import com.hirehive.exception.ResourceNotFoundException;
 import com.hirehive.model.Application;
 import com.hirehive.model.Job;
@@ -10,12 +11,14 @@ import com.hirehive.repository.ApplicationRepository;
 import com.hirehive.repository.JobRepository;
 import com.hirehive.repository.UserRepository;
 import com.hirehive.services.GenericService;
+import jakarta.persistence.Query;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -66,7 +69,7 @@ public class JobServiceImpl implements GenericService<JobDto, Long> {
                 .type(jobDto.getType())
                 .category(jobDto.getCategory())
                 .workType(jobDto.getWorkType())
-                .employer_id(user)  // Set the employer to the current user
+                .employer(user)
                 .build();
 
         // Handle associated applications if any
@@ -97,7 +100,7 @@ public class JobServiceImpl implements GenericService<JobDto, Long> {
             job.setCategory(jobDto.getCategory());
             job.setWorkType(jobDto.getWorkType());
             User user = userRepository.findById(jobDto.getEmployerId()).orElseThrow(() -> new ResourceNotFoundException("There is not Employer with this Id : "+jobDto.getEmployerId()));
-            job.setEmployer_id(user);
+            job.setEmployer(user);
 
             Job save = jobRepository.save(job);
             return modelMapper.map(save, JobDto.class);
@@ -120,4 +123,11 @@ public class JobServiceImpl implements GenericService<JobDto, Long> {
         List<Job> allJobsOfLoggedEmployer = jobRepository.getAllJobsOfLoggedEmployer(employerId);
         return allJobsOfLoggedEmployer.stream().map(job -> modelMapper.map(job, JobDto.class)).collect(Collectors.toList());
     }
+
+    public List<JobDto> getSearchedJobs(String type, String location, String category, String workType) {
+        List<Job> filteredJobs = jobRepository.findFilteredJobs(type, location, category, workType);
+        return filteredJobs.stream().map(job -> modelMapper.map(job,JobDto.class)).collect(Collectors.toList());
+    }
+
+
 }

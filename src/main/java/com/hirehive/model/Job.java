@@ -1,5 +1,6 @@
 package com.hirehive.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hirehive.constants.JobCategory;
 import com.hirehive.constants.JobType;
 import com.hirehive.constants.Locations;
@@ -43,12 +44,17 @@ public class Job {
     private WorkType workType;
 
     @ManyToOne
-    @JoinColumn(name = "employer_id",referencedColumnName = "id")
-    private User employer_id;
+    @JoinColumn(name = "employer_id",nullable = false)
+    private User employer;
 
     @OneToMany(mappedBy = "job")
+    @JsonIgnore // This will prevent recursion during JSON serialization
     private List<Application> applications;
 
-    // Getters and setters
+    @Override
+    public String toString() {
+        return "Job{id=" + id + ", title='" + title + "', companyName='" + companyName + "', location=" + location + "}";
+    }
+// Getters and setters
 }
 

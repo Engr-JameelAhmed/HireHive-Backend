@@ -9,8 +9,12 @@ import com.hirehive.repository.ApplicationRepository;
 import com.hirehive.repository.JobRepository;
 import com.hirehive.repository.UserRepository;
 import com.hirehive.services.GenericService;
+import com.hirehive.springSecurity.CustomUserDetails;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -45,18 +49,24 @@ public class ApplicationServiceImpl implements GenericService<ApplicationDto, Lo
     @Override
     public ApplicationDto create(ApplicationDto applicationDto) {
 
+
+        // Fetch Job entity and handle potential error
+        Job job = jobRepository.findById(applicationDto.getJobId())
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found with ID: " + applicationDto.getJobId()));
+
+        // Fetch the currently logged-in user
+        User user = getCurrentUser();
+
+        // Build the Application entity
         Application application = Application.builder()
                 .status(applicationDto.getStatus())
+                .job(job)
+                .employee(user)
                 .build();
 
-        Job optionalJob = jobRepository.findById(applicationDto.getJobId()).orElseThrow(() -> new ResourceNotFoundException("There is job present with this Id : "+applicationDto.getJobId()));
-        application.setJob(optionalJob);
-
-        User user = userRepository.findById(applicationDto.getEmployeeId()).orElseThrow(() -> new ResourceNotFoundException("There is no Employer with this Id : " + applicationDto.getEmployeeId()));
-        application.setEmployee(user);
-
-        Application save = applicationRepository.save(application);
-        return modelMapper.map(save, ApplicationDto.class);
+        // Save and return the Application entity as a DTO
+        Application savedApplication = applicationRepository.save(application);
+        return modelMapper.map(savedApplication, ApplicationDto.class);
     }
 
     @Override
@@ -87,5 +97,22 @@ public class ApplicationServiceImpl implements GenericService<ApplicationDto, Lo
             throw new RuntimeException("There is no Application with this ID for deleting : "+ id);
         }
         applicationRepository.deleteById(id);
+    }
+
+    // A method to get the currently logged-in user
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            // Assuming UserDetails has a method to get the User object or ID
+            Long userId = ((CustomUserDetails) userDetails).getUserId(); // or however you get the user ID
+            return userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+        }
+        throw new RuntimeException("User not authenticated");
+    }
+
+    public void updateApplicationStatus(Long id){
+        applicationRepository.updateStatusToRejected(id);
     }
 }

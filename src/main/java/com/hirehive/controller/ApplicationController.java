@@ -47,4 +47,10 @@ public class ApplicationController {
 //        List<ApplicationDto> loggedEmployerApplications = applicationService.getLoggedEmployerApplications(id);
 //        return ResponseEntity.ok(loggedEmployerApplications);
 //    }
+
+    @PutMapping("/{id}/status/reject")
+    public ResponseEntity<Void> updateApplicationStatus(@PathVariable Long id) {
+        applicationService.updateApplicationStatus(id);
+        return ResponseEntity.noContent().build();
+    }
 }

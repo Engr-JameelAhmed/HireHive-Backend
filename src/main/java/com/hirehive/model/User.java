@@ -35,7 +35,7 @@ public class User {
     @OneToMany(mappedBy = "employeeId")
     private List<CV> cvs;
 
-    @OneToMany(mappedBy = "employer_id")
+    @OneToMany(mappedBy = "employer")
     private List<Job> jobs;
 
     @OneToMany(mappedBy = "owner_id")
@@ -44,6 +44,13 @@ public class User {
     @OneToMany(mappedBy = "investor_id")
     private List<Investment> investments;
 
+    @OneToMany(mappedBy = "employee")
+    private List<Application> applications;
+
+    @Override
+    public String toString() {
+        return "User{id=" + id + ", username='" + username + "', email='" + email + "'}";
+    }
 }
 
 

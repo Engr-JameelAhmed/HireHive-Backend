@@ -1,11 +1,14 @@
 package com.hirehive.services.serviceImpl;
 
-import com.hirehive.constants.RoleType;
+import com.hirehive.dto.SearchJobsDTO;
 import com.hirehive.dto.UserDto;
 import com.hirehive.exception.ResourceNotFoundException;
 import com.hirehive.model.*;
 import com.hirehive.repository.*;
 import com.hirehive.services.GenericService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,18 +18,19 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.hirehive.util.GlobalMethods.isEmailValid;
-import static com.hirehive.util.GlobalMethods.isValidEmail;
 
 @Service
 public class UserServiceImpl implements GenericService<UserDto, Long> {
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public final String UPLOAD_DIR="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Resumes\\";
 
@@ -194,8 +198,42 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
         }
     }
 
+    public UserDto updateUserCv(MultipartFile file, UserDto userDto) throws IOException {
+        String filePath = null;
+
+        // Check if the file is not empty
+        if (file != null && !file.isEmpty()) {
+            // Save the file to the file system
+            String fileName = file.getOriginalFilename();
+            filePath = Paths.get(UPLOAD_DIR, fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR));
+            Files.write(Paths.get(filePath), file.getBytes());
+        }
+
+        // Find the user by email
+        Optional<User> optionalUser = userRepository.findByEmail(userDto.getEmail());
+        if (!optionalUser.isPresent()) {
+            throw new RuntimeException("User does not exist");
+        }
+
+        // Retrieve the existing user
+        User existingUser = optionalUser.get();
+
+        // Update the CV field if a new file was uploaded
+        if (filePath != null) {
+            existingUser.setCv(filePath);
+        }
+
+        // Save the updated user
+        User updatedUser = userRepository.save(existingUser);
+
+        // Map the updated user to UserDto and return
+        return modelMapper.map(updatedUser, UserDto.class);
+    }
+
     @Override
     public UserDto update(Long id, UserDto userDto) {
+
         Optional<User> optionalUser = userRepository.findById(id);
 
         if(optionalUser.isPresent()){
@@ -234,4 +272,18 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
         }
         userRepository.deleteById(id);
     }
+
+    // Fetch user by email
+    public UserDto getUserByEmail(String email) throws IOException {
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            // Convert User entity to UserDto if necessary
+            return modelMapper.map(user, UserDto.class);
+        } else {
+            throw new IOException("User not found with email: " + email);
+        }
+    }
+
+
 }

@@ -23,11 +23,17 @@ public class Application {
     private Job job;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "employee_id", nullable = false)
     private User employee;
 
     @Enumerated(EnumType.STRING)
     private ApplicationStatus status;
+
+
+    @Override
+    public String toString() {
+        return "Application{id=" + id + ", status=" + status + "}";
+    }
 
 }
 

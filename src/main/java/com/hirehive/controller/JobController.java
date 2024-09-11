@@ -2,6 +2,7 @@ package com.hirehive.controller;
 
 import com.hirehive.dto.JobApplicationDTO;
 import com.hirehive.dto.JobDto;
+import com.hirehive.dto.SearchJobsDTO;
 import com.hirehive.services.serviceImpl.JobServiceImpl;
 import com.hirehive.springSecurity.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +73,18 @@ public class JobController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
         }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("User details not found");
+    }
+
+
+
+    @GetMapping("/find-search-jobs")
+    public List<JobDto> getSearchedJobs(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String workType
+    ){
+        return jobService.getSearchedJobs(type,location,category,workType);
     }
 
 

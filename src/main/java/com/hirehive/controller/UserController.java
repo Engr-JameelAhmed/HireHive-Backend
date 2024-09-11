@@ -1,12 +1,18 @@
 package com.hirehive.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hirehive.dto.JobDto;
+import com.hirehive.dto.SearchJobsDTO;
 import com.hirehive.dto.UserDto;
 import com.hirehive.model.User;
+import com.hirehive.repository.UserRepository;
 import com.hirehive.services.serviceImpl.EmailSendingService;
 import com.hirehive.services.serviceImpl.UserServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +30,8 @@ public class UserController {
     @Autowired
     private UserServiceImpl userService;
 
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping("allUsers")
     public List<UserDto> getAllUsers() {
@@ -44,6 +52,18 @@ public class UserController {
 
         return userService.createUser(file, userDto);
     }
+    @PutMapping(value = "/update-user-cv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public UserDto updateUserCv(@RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+        // Get the current logged-in user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentEmail = authentication.getName(); // Assuming the email is used as the username
+
+        // Load the current user from the database using email
+        UserDto currentUser = userService.getUserByEmail(currentEmail);
+
+        // Update the user's CV with the provided file
+        return userService.updateUserCv(file, currentUser);
+    }
     @PutMapping("/{id}")
     public UserDto updateUser(@PathVariable Long id, @RequestBody UserDto userDetails) {
         return userService.update(id, userDetails);
@@ -52,5 +72,8 @@ public class UserController {
     public void deleteUser(@PathVariable Long id) {
         userService.delete(id);
     }
+
+
+
 
 }
