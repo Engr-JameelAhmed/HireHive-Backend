@@ -1,5 +1,6 @@
 package com.hirehive.controller;
 
+import com.hirehive.dto.AppliedJobsDTO;
 import com.hirehive.dto.JobApplicationDTO;
 import com.hirehive.dto.JobDto;
 import com.hirehive.dto.SearchJobsDTO;
@@ -85,6 +86,38 @@ public class JobController {
             @RequestParam(required = false) String workType
     ){
         return jobService.getSearchedJobs(type,location,category,workType);
+    }
+
+    @GetMapping("/applied-jobs-for-current-user")
+    public ResponseEntity<?> getAllAppliedJobsOfLoggedEmployer() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            Long currentUserId = userDetails.getUserId();
+            List<AppliedJobsDTO> jobApplications = jobService.getAllAppliedJobsOfLoggedEmployer(currentUserId);
+            if (jobApplications.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(jobApplications);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("User not found or not authenticated");
+    }
+
+    @GetMapping("/notapplied-jobs-for-current-user")
+    public ResponseEntity<?> getAllNotAppliedJobs() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            Long currentUserId = userDetails.getUserId();
+            List<JobDto> allNotAppliedJobs = jobService.getAllNotAppliedJobs(currentUserId);
+            if (allNotAppliedJobs.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(allNotAppliedJobs);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("User not found or not authenticated");
     }
 
 

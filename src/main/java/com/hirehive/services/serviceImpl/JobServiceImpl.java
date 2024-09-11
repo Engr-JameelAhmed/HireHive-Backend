@@ -1,5 +1,6 @@
 package com.hirehive.services.serviceImpl;
 
+import com.hirehive.dto.AppliedJobsDTO;
 import com.hirehive.dto.JobApplicationDTO;
 import com.hirehive.dto.JobDto;
 import com.hirehive.dto.SearchJobsDTO;
@@ -128,6 +129,16 @@ public class JobServiceImpl implements GenericService<JobDto, Long> {
         List<Job> filteredJobs = jobRepository.findFilteredJobs(type, location, category, workType);
         return filteredJobs.stream().map(job -> modelMapper.map(job,JobDto.class)).collect(Collectors.toList());
     }
+
+    public List<AppliedJobsDTO> getAllAppliedJobsOfLoggedEmployer(Long employerId) {
+        return jobRepository.findAppliedJobsByEmployeeId(employerId);
+    }
+
+    public List<JobDto> getAllNotAppliedJobs(Long employerId) {
+        List<Job> jobsWithoutApplicationFromEmployee = jobRepository.findJobsWithoutApplicationFromEmployee(employerId);
+        return jobsWithoutApplicationFromEmployee.stream().map(job -> modelMapper.map(job, JobDto.class)).collect(Collectors.toList());
+    }
+
 
 
 }

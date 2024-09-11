@@ -10,6 +10,7 @@ import com.hirehive.repository.JobRepository;
 import com.hirehive.repository.UserRepository;
 import com.hirehive.services.GenericService;
 import com.hirehive.springSecurity.CustomUserDetails;
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -112,6 +113,7 @@ public class ApplicationServiceImpl implements GenericService<ApplicationDto, Lo
         throw new RuntimeException("User not authenticated");
     }
 
+    @Transactional
     public void updateApplicationStatus(Long id){
         applicationRepository.updateStatusToRejected(id);
     }

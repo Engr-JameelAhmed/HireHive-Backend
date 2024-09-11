@@ -2,6 +2,7 @@ package com.hirehive.repository;
 
 import com.hirehive.dto.ApplicationDto;
 import com.hirehive.model.Application;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +15,8 @@ import java.util.List;
 public interface ApplicationRepository extends JpaRepository<Application,Long> {
 
     @Modifying
+    @Transactional
     @Query(value = "UPDATE application SET status = 'REJECTED' WHERE id = :id", nativeQuery = true)
-    void updateStatusToRejected(Long id);
+    void updateStatusToRejected(@Param("id") Long id);
 
 }
