@@ -58,6 +58,13 @@ public class ApplicationServiceImpl implements GenericService<ApplicationDto, Lo
         // Fetch the currently logged-in user
         User user = getCurrentUser();
 
+
+        // Check if the user has a CV
+        if (user.getCv() == null) {
+            throw new RuntimeException("User must have a CV to apply for a job.");
+        }
+
+
         // Build the Application entity
         Application application = Application.builder()
                 .status(applicationDto.getStatus())
