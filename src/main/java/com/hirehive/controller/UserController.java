@@ -43,14 +43,15 @@ public class UserController {
     }
     @PostMapping(value = "/newUser", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public UserDto createUser(
-            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart(value = "file", required = false) MultipartFile cv,
+            @RequestPart(value = "file", required = false) MultipartFile proposal,
             @RequestPart("user") String userDtoJson) throws IOException {
 
         // Convert the JSON string to UserDto
         ObjectMapper objectMapper = new ObjectMapper();
         UserDto userDto = objectMapper.readValue(userDtoJson, UserDto.class);
 
-        return userService.createUser(file, userDto);
+        return userService.createUser(cv,proposal, userDto);
     }
     @PutMapping(value = "/update-user-cv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public UserDto updateUserCv(@RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
@@ -63,6 +64,18 @@ public class UserController {
 
         // Update the user's CV with the provided file
         return userService.updateUserCv(file, currentUser);
+    }
+    @PutMapping(value = "/update-user-proposal", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public UserDto updateUserProposal(@RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+        // Get the current logged-in user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentEmail = authentication.getName(); // Assuming the email is used as the username
+
+        // Load the current user from the database using email
+        UserDto currentUser = userService.getUserByEmail(currentEmail);
+
+        // Update the user's CV with the provided file
+        return userService.updateUserProposal(file, currentUser);
     }
     @PutMapping("/{id}")
     public UserDto updateUser(@PathVariable Long id, @RequestBody UserDto userDetails) {

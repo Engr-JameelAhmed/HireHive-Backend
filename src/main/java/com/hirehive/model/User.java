@@ -26,6 +26,7 @@ public class User {
     private String email;
 
     private String cv;
+    private String proposal;
 
     @Enumerated(EnumType.STRING)
     private RoleType role;
@@ -51,6 +52,7 @@ public class User {
     public String toString() {
         return "User{id=" + id + ", username='" + username + "', email='" + email + "'}";
     }
+
 }
 
 

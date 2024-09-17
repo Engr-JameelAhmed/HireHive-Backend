@@ -1,6 +1,5 @@
 package com.hirehive.services.serviceImpl;
 
-import com.hirehive.dto.SearchJobsDTO;
 import com.hirehive.dto.UserDto;
 import com.hirehive.exception.ResourceNotFoundException;
 import com.hirehive.model.*;
@@ -8,7 +7,6 @@ import com.hirehive.repository.*;
 import com.hirehive.services.GenericService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +29,8 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public final String UPLOAD_DIR="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Resumes\\";
+    public final String UPLOAD_DIR_CV ="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Resumes\\";
+    public final String UPLOAD_DIR_PROPOSAL ="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Proposal\\";
 
 
     @Autowired
@@ -123,16 +121,25 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
         }
     }
     @Transactional
-    public UserDto createUser(MultipartFile file, UserDto userDto) throws IOException {
-        String filePath = null;
+    public UserDto createUser(MultipartFile cv,MultipartFile proposal, UserDto userDto) throws IOException {
+        String cvPath = null;
+        String proposalPath = null;
 
-        // Check if the file is not empty
-        if (file != null && !file.isEmpty()) {
+        // Check if the cv is not empty
+        if (cv != null && !cv.isEmpty()) {
             // Save the file to the file system
-            String fileName = file.getOriginalFilename();
-            filePath = Paths.get(UPLOAD_DIR + fileName).toString();
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
-            Files.write(Paths.get(filePath), file.getBytes());
+            String fileName = cv.getOriginalFilename();
+            cvPath = Paths.get(UPLOAD_DIR_CV + fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR_CV));
+            Files.write(Paths.get(cvPath), cv.getBytes());
+        }
+        // Check if the proposal is not empty
+        if (proposal != null && !proposal.isEmpty()) {
+            // Save the file to the file system
+            String fileName = proposal.getOriginalFilename();
+            proposalPath = Paths.get(UPLOAD_DIR_PROPOSAL + fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR_PROPOSAL));
+            Files.write(Paths.get(proposalPath), proposal.getBytes());
         }
 
         // Validate if the email actually exists using AbstractAPI
@@ -150,8 +157,12 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
                     .gender(userDto.getGender());
 
             // Set the cv field only if a file is uploaded
-            if (filePath != null) {
-                userBuilder.cv(filePath);
+            if (cvPath != null) {
+                userBuilder.cv(cvPath);
+            }
+            // Set the proposal field only if a file is uploaded
+            if (proposalPath != null) {
+                userBuilder.proposal(proposalPath);
             }
 
             User newUser = userBuilder.build();
@@ -205,8 +216,8 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
         if (file != null && !file.isEmpty()) {
             // Save the file to the file system
             String fileName = file.getOriginalFilename();
-            filePath = Paths.get(UPLOAD_DIR, fileName).toString();
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
+            filePath = Paths.get(UPLOAD_DIR_CV, fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR_CV));
             Files.write(Paths.get(filePath), file.getBytes());
         }
 
@@ -222,6 +233,40 @@ public class UserServiceImpl implements GenericService<UserDto, Long> {
         // Update the CV field if a new file was uploaded
         if (filePath != null) {
             existingUser.setCv(filePath);
+        }
+
+        // Save the updated user
+        User updatedUser = userRepository.save(existingUser);
+
+        // Map the updated user to UserDto and return
+        return modelMapper.map(updatedUser, UserDto.class);
+    }
+    public UserDto updateUserProposal(MultipartFile proposal, UserDto userDto) throws IOException {
+        String proposalPath = null;
+
+
+        // Check if the proposal is not empty
+        if (proposal != null && !proposal.isEmpty()) {
+            // Save the file to the file system
+            String fileName = proposal.getOriginalFilename();
+            proposalPath = Paths.get(UPLOAD_DIR_PROPOSAL, fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR_PROPOSAL));
+            Files.write(Paths.get(proposalPath), proposal.getBytes());
+        }
+
+        // Find the user by email
+        Optional<User> optionalUser = userRepository.findByEmail(userDto.getEmail());
+        if (!optionalUser.isPresent()) {
+            throw new RuntimeException("User does not exist");
+        }
+
+        // Retrieve the existing user
+        User existingUser = optionalUser.get();
+
+
+        // Update the PROPOSAL field if a new file was uploaded
+        if (proposalPath != null) {
+            existingUser.setProposal(proposalPath);
         }
 
         // Save the updated user
