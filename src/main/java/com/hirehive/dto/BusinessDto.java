@@ -22,4 +22,5 @@ public class BusinessDto {
     private String industry;
     private BusinessStatus status;
     private List<Long> investmentIds;
+    private String proposal;
 }

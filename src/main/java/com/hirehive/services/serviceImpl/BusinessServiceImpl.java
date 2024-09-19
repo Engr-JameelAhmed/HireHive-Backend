@@ -18,7 +18,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +33,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class BusinessServiceImpl implements GenericService<BusinessDto, Long> {
+
+    public final String UPLOAD_DIR_PROPOSAL ="D:\\HireHive\\Backend\\HireHive-Backend\\src\\main\\resources\\static\\Proposal\\";
+
     @Autowired
     private BusinessRepository businessRepository;
     @Autowired
@@ -48,7 +57,7 @@ public class BusinessServiceImpl implements GenericService<BusinessDto, Long> {
         return  modelMapper.map(business, BusinessDto.class);
     }
     @Override
-    public BusinessDto create(BusinessDto businessDto) {
+    public BusinessDto create( BusinessDto businessDto) {
         // Get the currently logged-in user's ID
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String loggedInUsername;
@@ -83,6 +92,72 @@ public class BusinessServiceImpl implements GenericService<BusinessDto, Long> {
         } else {
             business.setInvestments(Collections.emptyList());
         }
+
+        // Determine the status based on the size of the investments list
+        if (business.getInvestments().size() <= 4) {
+            business.setStatus(BusinessStatus.PENDING);
+        } else {
+            business.setStatus(BusinessStatus.ACTIVE);
+        }
+
+        // Save the Business entity
+        Business savedBusiness = businessRepository.save(business);
+
+        // Return the BusinessDto
+        return modelMapper.map(savedBusiness, BusinessDto.class);
+    }
+    public BusinessDto createBusinessWithProposal(MultipartFile proposal, BusinessDto businessDto) throws IOException {
+        String proposalPath = null;
+
+        // Check if the cv is not empty
+        if (proposal != null && !proposal.isEmpty()) {
+            // Save the file to the file system
+            String fileName = proposal.getOriginalFilename();
+            proposalPath = Paths.get(UPLOAD_DIR_PROPOSAL + fileName).toString();
+            Files.createDirectories(Paths.get(UPLOAD_DIR_PROPOSAL));
+            Files.write(Paths.get(proposalPath),proposal.getBytes());
+        }
+
+        // Get the currently logged-in user's ID
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String loggedInUsername;
+
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            loggedInUsername = userDetails.getUsername(); // or getUserId() if you have a method to get the ID
+        } else {
+            throw new RuntimeException("No user is currently logged in");
+        }
+
+        // Retrieve the User entity based on the logged-in username
+        User loggedUser = userRepository.findByEmail(loggedInUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("There is no Owner with this username: " + loggedInUsername));
+
+        // Create the Business entity
+        Business business = Business.builder()
+                .owner_id(loggedUser)
+                .ownerName(loggedUser.getUsername())
+                .description(businessDto.getDescription())
+                .createdOn(LocalDateTime.now())
+                .investmentAmount(businessDto.getInvestmentAmount())
+                .name(businessDto.getName())
+                .industry(businessDto.getIndustry())
+                .sharePercent(businessDto.getSharePercent())
+                .build();
+
+        // Retrieve and set investments
+        if (businessDto.getInvestmentIds() != null && !businessDto.getInvestmentIds().isEmpty()) {
+            List<Investment> investments = investmentRepository.findAllById(businessDto.getInvestmentIds());
+            business.setInvestments(investments);
+        } else {
+            business.setInvestments(Collections.emptyList());
+        }
+
+        // Set the proposal field only if a file is uploaded
+        if (proposalPath != null) {
+            business.setProposal(proposalPath);
+        }
+
 
         // Determine the status based on the size of the investments list
         if (business.getInvestments().size() <= 4) {
@@ -168,5 +243,16 @@ public class BusinessServiceImpl implements GenericService<BusinessDto, Long> {
     public List<BusinessDto> getAllPendingBusiness() {
         List<Business> all = businessRepository.getAllPendingBusiness();
         return all.stream().map(business -> modelMapper.map(business, BusinessDto.class)).collect(Collectors.toList());
+    }
+
+    public File getProposalFile(Long userId) throws IOException {
+        Business businessIsNotPresent = businessRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Business is not present"));
+        Path filePath = Paths.get(businessIsNotPresent.getProposal());
+
+        if (Files.exists(filePath)) {
+            return filePath.toFile();
+        } else {
+            throw new IOException("Proposal not found");
+        }
     }
 }

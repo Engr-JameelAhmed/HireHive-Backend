@@ -30,6 +30,7 @@ public class Business {
     private String name;
     private String industry;
     private Long sharePercent;
+    private String proposal;
     @Enumerated(EnumType.STRING)
     private BusinessStatus status;
     @OneToMany(mappedBy = "business")

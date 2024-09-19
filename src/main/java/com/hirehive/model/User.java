@@ -26,7 +26,6 @@ public class User {
     private String email;
 
     private String cv;
-    private String proposal;
 
     @Enumerated(EnumType.STRING)
     private RoleType role;
